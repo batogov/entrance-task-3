@@ -21,3 +21,34 @@
 Открывать `gifs.html` нужно с помощью локального веб-сервера – не как файл. 
 Это можно сделать с помощью встроенного в WebStorm/Idea веб-сервера, с помощью простого сервера
 из состава PHP или Python. Можно воспользоваться и любым другим способом.
+
+## Исправление багов
+
+1. Для корректной работы серсис воркера, файл `service-worker.js` был перенесен в корень проекта (также был изменён путь до этого файла в `blocks.js`). Теперь скоуп сервис воркера охватывает всё приложение.
+2. Следующее исправление касается функции `needStoreForOffline` в файле сервис воркера. Для того, чтобы сервис воркер в оффлайн режиме отслеживал файл `gifs.html`, в возвращаемое условие была добавлена ещё одна строчка:
+
+```javascript
+function needStoreForOffline(cacheKey) {
+    return cacheKey.includes('vendor/') ||
+        cacheKey.includes('assets/') ||
+        cacheKey.includes('gifs.html') ||
+        cacheKey.endsWith('jquery.min.js');
+}
+```
+
+3. Для того, чтобы приложение сначала пыталось скачивать файлы, а только потом, в случае неудачи, брало их из кеша, было изменено пару строчек в обработчике события fetch:
+
+```javascript
+let response;
+if (needStoreForOffline(cacheKey)) {
+    response = fetchAndPutToCache(cacheKey, event.request);
+} else {
+    response = fetchWithFallbackToCache(event.request);
+}
+```
+
+4. Последнее маленькое исправление. Для того, чтобы приложение корректно обновляло статику, была изменена константа `CACHE_VERSION`:
+
+```javascript
+const CACHE_VERSION = '1.1.0';
+```
